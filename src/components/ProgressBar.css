@@ -1,0 +1,23 @@
+.progress-bar-wrap { margin-bottom: 12px; }
+.progress-bar-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.progress-label { font-size: 0.82rem; color: var(--text-secondary); font-weight: 500; }
+.progress-value  { font-size: 0.82rem; font-weight: 700; }
+.progress-track {
+  height: 8px;
+  background: var(--border-solid);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 1s ease;
+  animation: growRight 1s ease forwards;
+}
+@keyframes growRight {
+  from { width: 0 !important; }
+}
