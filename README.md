@@ -1,28 +1,26 @@
-# React + Vite
-
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
-
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
 
 # PRSF – Public Rest Space Finder (Frontend)
 
 ## Project Overview
-A modern, research-grade React app for discovering, reviewing, and analyzing accessible urban rest spaces. All data is stored in browser localStorage. No backend required.
+A modern React app for discovering, reviewing, and analyzing accessible urban rest spaces. The frontend uses a SQL Server-backed API for spaces and reviews, with bundled sample data available if the API is offline.
 
 ## Tech Stack
 - React.js (Vite)
 - React Router
+- Node.js and Express
+- Microsoft SQL Server (`mssql`)
+
+## Run the app with SQL Server
+
+1. Start a local SQL Server instance (for example SQL Server Developer or Express), or connect to an existing server. The VS Code SQL Server extension is a client and does not install or run the server. The app currently uses SQL Server Authentication, so create or use a SQL login with access to the database.
+2. In VS Code, use the SQL Server extension to connect to your server and run `CREATE DATABASE space_finder;`.
+3. Copy `.env.example` to `.env` and enter your server, database, SQL login, and password. For a named instance such as `SQLEXPRESS`, set `SQL_SERVER=localhost\SQLEXPRESS` and remove or comment out `SQL_PORT`.
+4. Install dependencies with `npm install`.
+5. Create the tables and seed the sample spaces and reviews with `npm run db:setup`.
+6. Start the API in one terminal with `npm run dev:api`.
+7. Start the frontend in another terminal with `npm run dev`.
+
+The Vite development server proxies `/api` requests to `http://localhost:3001`. The API exposes `GET /api/health`, `GET /api/spaces`, `GET /api/spaces/:id`, `GET /api/reviews` (optionally filtered by `spaceId`), and `POST /api/reviews`. New reviews are saved in SQL Server and update the space's rating and review count.
 
 
 
@@ -11486,5 +11484,6 @@ All app state is stored under `prsf_state`:
 
 ---
 For more, see code comments and each folder's README (if present).
-#   S p a c e - f i n d e r  
+#   S p a c e - f i n d e r 
+ 
  

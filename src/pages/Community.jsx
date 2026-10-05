@@ -1,12 +1,12 @@
 import { useState, useRef } from "react";
 import { useApp } from "../context/AppContext";
-import { restSpaces } from "../data/restSpaces";
 import "./Community.css";
 
 const categoryOptions = ["Bench Condition", "Wheelchair Access", "Shade Quality", "Water Availability", "Lighting", "Cleanliness", "Safety", "Other"];
 
 export default function Community() {
   const { state, dispatch, addToast } = useApp();
+  const spaces = state.spaces;
   const fileRef = useRef();
   const [form, setForm] = useState({ spaceId: "", category: "", description: "", imagePreview: null });
   const [submitting, setSubmitting] = useState(false);
@@ -29,29 +29,27 @@ export default function Community() {
       return addToast("Please fill all required fields", "warning");
     }
     setSubmitting(true);
-    setTimeout(() => {
-      const space = restSpaces.find((s) => s.id === Number(form.spaceId));
-      dispatch({
-        type: "ADD_REPORT",
-        payload: {
-          spaceId: Number(form.spaceId),
-          spaceName: space?.name || "Unknown Space",
-          category: form.category,
-          description: form.description,
-          imagePreview: form.imagePreview,
-          user: state.user.name,
-          avatar: state.user.avatar,
-          date: new Date().toISOString().split("T")[0],
-          helpful: 0,
-          notHelpful: 0,
-        },
-      });
-      setForm({ spaceId: "", category: "", description: "", imagePreview: null });
-      if (fileRef.current) fileRef.current.value = "";
-      setSubmitting(false);
-      setActiveTab("feed");
-      addToast("Report submitted! Thank you for contributing.", "success");
-    }, 800);
+    const space = spaces.find((s) => s.id === Number(form.spaceId));
+    dispatch({
+      type: "ADD_REPORT",
+      payload: {
+        spaceId: Number(form.spaceId),
+        spaceName: space?.name || "Unknown Space",
+        category: form.category,
+        description: form.description,
+        imagePreview: form.imagePreview,
+        user: state.user.name,
+        avatar: state.user.avatar,
+        date: new Date().toISOString().split("T")[0],
+        helpful: 0,
+        notHelpful: 0,
+      },
+    });
+    setForm({ spaceId: "", category: "", description: "", imagePreview: null });
+    if (fileRef.current) fileRef.current.value = "";
+    setSubmitting(false);
+    setActiveTab("feed");
+    addToast("Report submitted! Thank you for contributing.", "success");
   };
 
   const handleVote = (id, vote) => {
@@ -143,7 +141,7 @@ export default function Community() {
                     required
                   >
                     <option value="">Select a rest space...</option>
-                    {restSpaces.map((s) => (
+                    {spaces.map((s) => (
                       <option key={s.id} value={s.id}>{s.name}</option>
                     ))}
                   </select>

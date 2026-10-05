@@ -3,11 +3,11 @@ import SpaceCard from "../components/SpaceCard";
 import FilterPanel from "../components/FilterPanel";
 import SkeletonCard from "../components/SkeletonCard";
 import { useApp } from "../context/AppContext";
-import { restSpaces } from "../data/restSpaces";
 import "./Explorer.css";
 
 export default function Explorer() {
   const { state, dispatch } = useApp();
+  const spaces = state.spaces;
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState("grid");
@@ -25,21 +25,21 @@ export default function Explorer() {
   };
 
   const filtered = useMemo(() => {
-    return restSpaces.filter((s) => {
+    return spaces.filter((s) => {
       const matchSearch = !search || s.name.toLowerCase().includes(search.toLowerCase()) || s.address.toLowerCase().includes(search.toLowerCase());
       const matchFeatures = filters.features.length === 0 || filters.features.every((f) => s.features.includes(f));
       const matchCrowd = filters.crowd === "all" || s.crowdLevel === filters.crowd;
       const matchScore = s.accessibilityScore >= filters.minScore;
       return matchSearch && matchFeatures && matchCrowd && matchScore;
     });
-  }, [search, filters]);
+  }, [search, filters, spaces]);
 
   return (
     <div className="page-wrapper explorer-page">
       <div className="explorer-header">
         <div>
           <h1 className="section-title">Rest Space Explorer</h1>
-          <p className="section-subtitle">Discover {restSpaces.length} accessible urban rest spaces</p>
+          <p className="section-subtitle">Discover {spaces.length} accessible urban rest spaces</p>
         </div>
         <div className="explorer-controls">
           <div className="search-wrap">

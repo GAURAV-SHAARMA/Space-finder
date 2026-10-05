@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useApp } from "../context/AppContext";
-import { restSpaces } from "../data/restSpaces";
-import { sampleReviews } from "../data/reviews";
+import { createReview } from "../api";
 import CircleScore from "../components/CircleScore";
 import ProgressBar from "../components/ProgressBar";
 import SpaceCard from "../components/SpaceCard";
@@ -15,12 +14,14 @@ export default function SpaceDetail() {
   const { state, dispatch, addToast } = useApp();
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: "" });
   const [hoverRating, setHoverRating] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
 
-  const space = restSpaces.find((s) => s.id === Number(id));
+  const spaces = state.spaces;
+  const space = spaces.find((s) => s.id === Number(id));
 
   useEffect(() => {
     if (space) dispatch({ type: "ADD_RECENTLY_VIEWED", payload: space });
-  }, [id]);
+  }, [id, space, dispatch]);
 
   if (!space) return (
     <div className="page-wrapper" style={{ paddingTop: "calc(var(--nav-height) + 28px)" }}>
@@ -33,20 +34,33 @@ export default function SpaceDetail() {
   );
 
   const isSaved = state.savedSpaces.some((s) => s.id === space.id);
-  const allReviews = [...sampleReviews.filter((r) => r.spaceId === space.id), ...state.reviews.filter((r) => r.spaceId === space.id)];
-  const nearby = restSpaces.filter((s) => s.id !== space.id && s.features.some((f) => space.features.includes(f))).slice(0, 3);
+  const allReviews = state.reviews.filter((r) => r.spaceId === space.id);
+  const nearby = spaces.filter((s) => s.id !== space.id && s.features.some((f) => space.features.includes(f))).slice(0, 3);
 
   const handleSave = () => {
     dispatch({ type: "TOGGLE_SAVE_SPACE", payload: space });
     addToast(isSaved ? "Removed from favorites" : "Saved to favorites!", isSaved ? "info" : "success");
   };
 
-  const handleReview = (e) => {
+  const handleReview = async (e) => {
     e.preventDefault();
     if (!reviewForm.comment.trim()) return addToast("Please write a comment", "warning");
-    dispatch({ type: "ADD_REVIEW", payload: { spaceId: space.id, user: state.user.name, avatar: state.user.avatar, ...reviewForm, date: new Date().toISOString().split("T")[0], helpful: 0 } });
-    setReviewForm({ rating: 5, comment: "" });
-    addToast("Review submitted! Thank you.", "success");
+    setSubmitting(true);
+    try {
+      const review = await createReview({
+        spaceId: space.id,
+        user: state.user.name,
+        avatar: state.user.avatar,
+        ...reviewForm,
+      });
+      dispatch({ type: "ADD_REVIEW", payload: review });
+      setReviewForm({ rating: 5, comment: "" });
+      addToast("Review submitted! Thank you.", "success");
+    } catch (error) {
+      addToast(`Review could not be submitted: ${error.message}`, "error");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const scoreColor = space.accessibilityScore >= 85 ? "#10b981" : space.accessibilityScore >= 65 ? "#f59e0b" : "#ef4444";
@@ -209,7 +223,9 @@ export default function SpaceDetail() {
                 onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
               />
             </div>
-            <button type="submit" className="btn btn-primary">Submit Review</button>
+            <button type="submit" className="btn btn-primary" disabled={submitting}>
+              {submitting ? "Submitting..." : "Submit Review"}
+            </button>
           </form>
         </div>
       </div>

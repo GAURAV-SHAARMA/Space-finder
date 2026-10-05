@@ -1,159 +1,186 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { restSpaces } from "../data/restSpaces";
+import L from "leaflet";
+import { Circle, MapContainer, Marker, Polyline, Popup, TileLayer, useMap } from "react-leaflet";
+import { useApp } from "../context/AppContext";
 import CircleScore from "../components/CircleScore";
 import "./MapView.css";
+import "leaflet/dist/leaflet.css";
 
-const heatZones = [
-  { id: 1, label: "Zone A – Central", score: 91, top: "20%", left: "35%", size: 120, color: "rgba(16,185,129,0.18)" },
-  { id: 2, label: "Zone B – Metro", score: 85, top: "40%", left: "55%", size: 100, color: "rgba(16,185,129,0.14)" },
-  { id: 3, label: "Zone C – South", score: 70, top: "60%", left: "25%", size: 90, color: "rgba(245,158,11,0.16)" },
-  { id: 4, label: "Zone D – Old City", score: 55, top: "25%", left: "70%", size: 80, color: "rgba(239,68,68,0.14)" },
-  { id: 5, label: "Zone E – Tech Hub", score: 90, top: "70%", left: "65%", size: 110, color: "rgba(16,185,129,0.16)" },
-];
+const defaultCenter = [28.6139, 77.209];
 
-const mapPins = [
-  { id: 1, top: "28%", left: "38%", score: 92, name: "Central Park Zone" },
-  { id: 2, top: "45%", left: "58%", score: 85, name: "Metro Alcove" },
-  { id: 3, top: "35%", left: "20%", score: 78, name: "Riverside Point" },
-  { id: 4, top: "55%", left: "42%", score: 96, name: "CP Plaza" },
-  { id: 5, top: "65%", left: "28%", score: 70, name: "Green Belt" },
-  { id: 6, top: "50%", left: "72%", score: 88, name: "Hospital Zone" },
-  { id: 7, top: "22%", left: "68%", score: 55, name: "Old City Bench" },
-  { id: 8, top: "72%", left: "62%", score: 90, name: "Tech Hub Lounge" },
-];
+function scoreColor(score) {
+  return score >= 85 ? "#10b981" : score >= 65 ? "#f59e0b" : "#ef4444";
+}
 
-const routePoints = [
-  { top: "55%", left: "42%", label: "Start" },
-  { top: "45%", left: "50%", label: "" },
-  { top: "45%", left: "58%", label: "" },
-  { top: "28%", left: "38%", label: "End" },
-];
+function MapViewport({ spaces, selectedSpace, resetVersion }) {
+  const map = useMap();
+  const bounds = useMemo(
+    () => spaces.filter((space) => Number.isFinite(space.lat) && Number.isFinite(space.lng))
+      .map((space) => [space.lat, space.lng]),
+    [spaces],
+  );
+
+  useEffect(() => {
+    if (bounds.length) map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+  }, [map, bounds]);
+
+  useEffect(() => {
+    if (selectedSpace) {
+      map.flyTo([selectedSpace.lat, selectedSpace.lng], Math.max(map.getZoom(), 14));
+    }
+  }, [map, selectedSpace]);
+
+  useEffect(() => {
+    if (!selectedSpace && bounds.length) {
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+    }
+  }, [bounds, map, resetVersion, selectedSpace]);
+
+  return null;
+}
+
+function markerIcon(score, selected) {
+  const color = scoreColor(score);
+  return L.divIcon({
+    className: "leaflet-score-icon",
+    html: `<span class="leaflet-score-pin${selected ? " selected" : ""}" style="--pin-color:${color}"><span>${score}</span></span>`,
+    iconSize: [42, 42],
+    iconAnchor: [21, 21],
+  });
+}
+
+function distanceBetween(first, second) {
+  const radians = (degrees) => degrees * Math.PI / 180;
+  const latitudeDelta = radians(second.lat - first.lat);
+  const longitudeDelta = radians(second.lng - first.lng);
+  const a = Math.sin(latitudeDelta / 2) ** 2
+    + Math.cos(radians(first.lat)) * Math.cos(radians(second.lat))
+    * Math.sin(longitudeDelta / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 export default function MapView() {
+  const { state } = useApp();
   const [selectedPin, setSelectedPin] = useState(null);
   const [showHeatmap, setShowHeatmap] = useState(true);
   const [showRoute, setShowRoute] = useState(false);
-  const [activeZone, setActiveZone] = useState(null);
+  const [resetVersion, setResetVersion] = useState(0);
+  const spaces = useMemo(
+    () => state.spaces.filter((item) => Number.isFinite(item.lat) && Number.isFinite(item.lng)),
+    [state.spaces],
+  );
+  const space = spaces.find((item) => item.id === selectedPin) || null;
 
-  const pinColor = (score) => score >= 85 ? "#10b981" : score >= 65 ? "#f59e0b" : "#ef4444";
-  const space = selectedPin ? restSpaces.find((s) => s.id === selectedPin) : null;
+  const route = useMemo(() => {
+    if (spaces.length < 2) return [];
+    const start = space || spaces[0];
+    const end = spaces
+      .filter((candidate) => candidate.id !== start.id)
+      .reduce((nearest, candidate) => (
+        !nearest || distanceBetween(start, candidate) < distanceBetween(start, nearest)
+          ? candidate
+          : nearest
+      ), null);
+    return end ? [start, end] : [];
+  }, [space, spaces]);
+
+  const scoreGroups = [
+    { label: "Excellent (85+)", minimum: 85 },
+    { label: "Good (65–84)", minimum: 65, maximum: 84 },
+    { label: "Needs improvement (<65)", minimum: 0, maximum: 64 },
+  ];
+
+  const resetMap = () => {
+    setSelectedPin(null);
+    setResetVersion((version) => version + 1);
+  };
 
   return (
     <div className="page-wrapper map-page">
       <div className="map-page-header">
         <div>
           <h1 className="section-title">🗺️ City Map Visualization</h1>
-          <p className="section-subtitle">Interactive accessibility map with heatmap zones and route recommendations</p>
+          <p className="section-subtitle">Explore rest spaces on OpenStreetMap and compare accessibility scores</p>
         </div>
         <div className="map-controls glass-card">
           <button className={`map-ctrl-btn ${showHeatmap ? "active" : ""}`} onClick={() => setShowHeatmap(!showHeatmap)}>
-            🌡️ Heatmap
+            🌡️ Score overlay
           </button>
           <button className={`map-ctrl-btn ${showRoute ? "active" : ""}`} onClick={() => setShowRoute(!showRoute)}>
-            🛣️ Route
+            🛣️ Nearby line
           </button>
-          <button className="map-ctrl-btn" onClick={() => setSelectedPin(null)}>
+          <button className="map-ctrl-btn" onClick={resetMap}>
             🔄 Reset
           </button>
         </div>
       </div>
 
       <div className="map-layout">
-        {/* Map canvas */}
         <div className="map-canvas glass-card">
           <div className="map-canvas-header">
-            <span className="map-canvas-title">📍 New Delhi – Accessibility Map</span>
+            <span className="map-canvas-title">📍 Rest Spaces</span>
             <div className="map-legend-inline">
-              <span><span className="legend-dot-sm" style={{ background: "#10b981" }}></span> Excellent (85+)</span>
-              <span><span className="legend-dot-sm" style={{ background: "#f59e0b" }}></span> Good (65-84)</span>
-              <span><span className="legend-dot-sm" style={{ background: "#ef4444" }}></span> Poor (&lt;65)</span>
+              {scoreGroups.map((group) => (
+                <span key={group.label}>
+                  <span className="legend-dot-sm" style={{ background: scoreColor(group.minimum) }}></span>
+                  {group.label}
+                </span>
+              ))}
             </div>
           </div>
 
-          <div className="map-area">
-            {/* Grid background */}
-            <div className="map-bg-grid"></div>
+          <MapContainer center={defaultCenter} zoom={12} scrollWheelZoom className="map-area">
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <MapViewport spaces={spaces} selectedSpace={space} resetVersion={resetVersion} />
 
-            {/* Road lines */}
-            <svg className="map-roads" viewBox="0 0 100 100" preserveAspectRatio="none">
-              <line x1="0" y1="50" x2="100" y2="50" stroke="var(--border-solid)" strokeWidth="0.4" />
-              <line x1="50" y1="0" x2="50" y2="100" stroke="var(--border-solid)" strokeWidth="0.4" />
-              <line x1="0" y1="30" x2="100" y2="70" stroke="var(--border-solid)" strokeWidth="0.3" />
-              <line x1="20" y1="0" x2="80" y2="100" stroke="var(--border-solid)" strokeWidth="0.3" />
-              <line x1="0" y1="70" x2="100" y2="30" stroke="var(--border-solid)" strokeWidth="0.25" />
-            </svg>
-
-            {/* Heatmap zones */}
-            {showHeatmap && heatZones.map((zone) => (
-              <div
-                key={zone.id}
-                className={`heat-zone ${activeZone === zone.id ? "active" : ""}`}
-                style={{
-                  top: zone.top, left: zone.left,
-                  width: zone.size, height: zone.size,
-                  background: zone.color,
-                  marginLeft: -zone.size / 2, marginTop: -zone.size / 2,
+            {showHeatmap && spaces.map((mappedSpace) => (
+              <Circle
+                key={`score-${mappedSpace.id}`}
+                center={[mappedSpace.lat, mappedSpace.lng]}
+                radius={350}
+                pathOptions={{
+                  color: scoreColor(mappedSpace.accessibilityScore),
+                  fillColor: scoreColor(mappedSpace.accessibilityScore),
+                  fillOpacity: 0.14,
+                  weight: 1,
+                  interactive: false,
                 }}
-                onClick={() => setActiveZone(activeZone === zone.id ? null : zone.id)}
-              >
-                <span className="heat-zone-label">{zone.score}</span>
-              </div>
+              />
             ))}
 
-            {/* Route */}
-            {showRoute && (
-              <svg className="map-route-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-                <polyline
-                  points={routePoints.map((p) => `${parseFloat(p.left)},${parseFloat(p.top)}`).join(" ")}
-                  fill="none"
-                  stroke="var(--primary)"
-                  strokeWidth="1.2"
-                  strokeDasharray="3,2"
-                  className="route-line-anim"
-                />
-              </svg>
+            {showRoute && route.length === 2 && (
+              <Polyline
+                positions={route.map((item) => [item.lat, item.lng])}
+                pathOptions={{ color: "#2563eb", dashArray: "8 8", weight: 4 }}
+              />
             )}
 
-            {/* Pins */}
-            {mapPins.map((pin) => (
-              <div
-                key={pin.id}
-                className={`map-pin-marker ${selectedPin === pin.id ? "selected" : ""}`}
-                style={{ top: pin.top, left: pin.left }}
-                onClick={() => setSelectedPin(selectedPin === pin.id ? null : pin.id)}
-                title={pin.name}
+            {spaces.map((mappedSpace) => (
+              <Marker
+                key={mappedSpace.id}
+                position={[mappedSpace.lat, mappedSpace.lng]}
+                icon={markerIcon(mappedSpace.accessibilityScore, selectedPin === mappedSpace.id)}
+                eventHandlers={{
+                  click: () => setSelectedPin(mappedSpace.id),
+                }}
               >
-                <div className="pin-circle" style={{ background: pinColor(pin.score) }}>
-                  <span className="pin-score">{pin.score}</span>
-                </div>
-                <div className="pin-stem"></div>
-                <div className="pin-name-tooltip">{pin.name}</div>
-              </div>
+                <Popup>
+                  <strong>{mappedSpace.name}</strong>
+                  <br />
+                  Accessibility: {mappedSpace.accessibilityScore}/100
+                  <br />
+                  {mappedSpace.address}
+                </Popup>
+              </Marker>
             ))}
-          </div>
+          </MapContainer>
         </div>
 
-        {/* Side panel */}
         <div className="map-side">
-          {/* Zone info */}
-          {activeZone && showHeatmap && (
-            <div className="glass-card map-zone-info animate-scaleIn">
-              <h4>🌡️ Zone Details</h4>
-              {(() => {
-                const z = heatZones.find((z) => z.id === activeZone);
-                return z ? (
-                  <>
-                    <p className="zone-name">{z.label}</p>
-                    <CircleScore score={z.score} size={70} label="Score" />
-                    <p className="zone-desc">Accessibility coverage zone with {z.score >= 85 ? "excellent" : z.score >= 65 ? "good" : "poor"} infrastructure.</p>
-                  </>
-                ) : null;
-              })()}
-            </div>
-          )}
-
-          {/* Selected pin info */}
           {space && (
             <div className="glass-card map-pin-info animate-scaleIn">
               <img src={space.image} alt={space.name} className="pin-info-img" />
@@ -165,9 +192,9 @@ export default function MapView() {
                   <CircleScore score={space.aiConfidence} size={60} label="AI Conf" />
                 </div>
                 <div className="pin-info-features">
-                  {space.features.map((f) => (
-                    <span key={f} className="badge badge-primary" style={{ fontSize: "0.7rem" }}>
-                      {f === "bench" ? "🪑" : f === "shade" ? "🌳" : f === "drinkingWater" ? "💧" : "♿"} {f}
+                  {space.features.map((feature) => (
+                    <span key={feature} className="badge badge-primary" style={{ fontSize: "0.7rem" }}>
+                      {feature === "bench" ? "🪑" : feature === "shade" ? "🌳" : feature === "drinkingWater" ? "💧" : "♿"} {feature}
                     </span>
                   ))}
                 </div>
@@ -178,35 +205,45 @@ export default function MapView() {
             </div>
           )}
 
-          {/* All zones list */}
           <div className="glass-card map-zones-list">
-            <h4 className="chart-title">📊 Accessibility Zones</h4>
-            {heatZones.map((zone) => (
-              <div
-                key={zone.id}
-                className={`zone-list-item ${activeZone === zone.id ? "active" : ""}`}
-                onClick={() => { setShowHeatmap(true); setActiveZone(zone.id); }}
-              >
-                <div className="zone-list-dot" style={{ background: pinColor(zone.score) }}></div>
-                <span className="zone-list-label">{zone.label}</span>
-                <span className="zone-list-score" style={{ color: pinColor(zone.score) }}>{zone.score}</span>
-              </div>
-            ))}
+            <h4 className="chart-title">📊 Accessibility Scores</h4>
+            {scoreGroups.map((group) => {
+              const count = spaces.filter((item) => item.accessibilityScore >= group.minimum
+                && (group.maximum === undefined || item.accessibilityScore <= group.maximum)).length;
+              return (
+                <div key={group.label} className="zone-list-item">
+                  <div className="zone-list-dot" style={{ background: scoreColor(group.minimum) }}></div>
+                  <span className="zone-list-label">{group.label}</span>
+                  <span className="zone-list-score" style={{ color: scoreColor(group.minimum) }}>{count}</span>
+                </div>
+              );
+            })}
+            <p className="map-overlay-note">
+              The score overlay circles show approximate coverage around each mapped space, not real-time crowd density.
+            </p>
           </div>
 
-          {/* Nearby spaces */}
+          {showRoute && route.length === 2 && (
+            <div className="glass-card map-zone-info">
+              <h4>🛣️ Nearby spaces</h4>
+              <p className="zone-name">{route[0].name} → {route[1].name}</p>
+              <p className="zone-desc">Straight-line distance: {distanceBetween(route[0], route[1]).toFixed(1)} km. This is not turn-by-turn navigation.</p>
+            </div>
+          )}
+
           <div className="glass-card map-nearby-list">
             <h4 className="chart-title">📍 All Mapped Spaces</h4>
-            {restSpaces.map((s) => (
-              <div
-                key={s.id}
-                className={`map-space-item ${selectedPin === s.id ? "active" : ""}`}
-                onClick={() => setSelectedPin(s.id)}
+            {spaces.map((mappedSpace) => (
+              <button
+                type="button"
+                key={mappedSpace.id}
+                className={`map-space-item ${selectedPin === mappedSpace.id ? "active" : ""}`}
+                onClick={() => setSelectedPin(mappedSpace.id)}
               >
-                <div className="map-space-dot" style={{ background: pinColor(s.accessibilityScore) }}></div>
-                <span className="map-space-name">{s.name}</span>
-                <span className="map-space-score" style={{ color: pinColor(s.accessibilityScore) }}>{s.accessibilityScore}</span>
-              </div>
+                <span className="map-space-dot" style={{ background: scoreColor(mappedSpace.accessibilityScore) }}></span>
+                <span className="map-space-name">{mappedSpace.name}</span>
+                <span className="map-space-score" style={{ color: scoreColor(mappedSpace.accessibilityScore) }}>{mappedSpace.accessibilityScore}</span>
+              </button>
             ))}
           </div>
         </div>

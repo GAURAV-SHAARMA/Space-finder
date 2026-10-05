@@ -1,11 +1,15 @@
 import { createContext, useContext, useReducer, useEffect } from "react";
+import { restSpaces } from "../data/restSpaces";
+import { sampleReviews } from "../data/reviews";
+import { getReviews, getSpaces } from "../api";
 
 const AppContext = createContext();
 
 const initialState = {
   theme: "light",
+  spaces: restSpaces,
   savedSpaces: [],
-  reviews: [],
+  reviews: sampleReviews,
   preferences: {},
   reports: [],
   searchHistory: [],
@@ -28,6 +32,12 @@ function reducer(state, action) {
     case "TOGGLE_THEME":
       return { ...state, theme: state.theme === "light" ? "dark" : "light" };
 
+    case "SET_SPACES":
+      return { ...state, spaces: action.payload };
+
+    case "SET_REVIEWS":
+      return { ...state, reviews: action.payload };
+
     case "TOGGLE_SAVE_SPACE": {
       const exists = state.savedSpaces.find((s) => s.id === action.payload.id);
       const savedSpaces = exists
@@ -37,8 +47,18 @@ function reducer(state, action) {
     }
 
     case "ADD_REVIEW": {
-      const reviews = [...state.reviews, { ...action.payload, id: Date.now() }];
-      return { ...state, reviews };
+      const review = { ...action.payload, id: action.payload.id || Date.now() };
+      const reviews = [...state.reviews, review];
+      const spaces = state.spaces.map((space) => {
+        if (space.id !== review.spaceId) return space;
+        const count = space.reviews || 0;
+        return {
+          ...space,
+          rating: Number((((space.rating * count) + review.rating) / (count + 1)).toFixed(1)),
+          reviews: count + 1,
+        };
+      });
+      return { ...state, reviews, spaces };
     }
 
     case "SET_PREFERENCES":
@@ -86,7 +106,28 @@ export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState, loadFromStorage);
 
   useEffect(() => {
-    const { toasts, ...persistable } = state;
+    let active = true;
+
+    getSpaces()
+      .then((spaces) => {
+        if (active) dispatch({ type: "SET_SPACES", payload: spaces });
+      })
+      .catch((error) => console.error("Unable to load spaces from the API:", error));
+
+    getReviews()
+      .then((reviews) => {
+        if (active) dispatch({ type: "SET_REVIEWS", payload: reviews });
+      })
+      .catch((error) => console.error("Unable to load reviews from the API:", error));
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const persistable = { ...state };
+    delete persistable.toasts;
     localStorage.setItem("prsf_state", JSON.stringify(persistable));
   }, [state]);
 

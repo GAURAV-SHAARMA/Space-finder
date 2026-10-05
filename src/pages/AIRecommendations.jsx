@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useApp } from "../context/AppContext";
-import { restSpaces } from "../data/restSpaces";
 import SpaceCard from "../components/SpaceCard";
 import CircleScore from "../components/CircleScore";
 import "./AIRecommendations.css";
@@ -41,7 +40,7 @@ export default function AIRecommendations() {
     setLoading(true);
     dispatch({ type: "SET_PREFERENCES", payload: prefs });
     setTimeout(() => {
-      const scored = restSpaces
+      const scored = state.spaces
         .map((s) => ({ ...s, aiMatchScore: computeScore(s, prefs) }))
         .sort((a, b) => b.aiMatchScore - a.aiMatchScore);
       setResults(scored);

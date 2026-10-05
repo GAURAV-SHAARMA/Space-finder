@@ -5,12 +5,13 @@ import BarChart from "../components/BarChart";
 import CircleScore from "../components/CircleScore";
 import ProgressBar from "../components/ProgressBar";
 import { useApp } from "../context/AppContext";
-import { recentActivity, restSpaces } from "../data/restSpaces";
+import { recentActivity } from "../data/restSpaces";
 import { detectionAccuracy, userSatisfaction } from "../data/analyticsData";
 import "./Dashboard.css";
 
 export default function Dashboard() {
   const { state } = useApp();
+  const spaces = state.spaces;
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -18,10 +19,12 @@ export default function Dashboard() {
     return () => clearTimeout(t);
   }, []);
 
-  const totalReviews = state.reviews.length + 89;
-  const avgScore = Math.round(restSpaces.reduce((a, s) => a + s.accessibilityScore, 0) / restSpaces.length);
+  const totalReviews = state.reviews.length;
+  const avgScore = spaces.length
+    ? Math.round(spaces.reduce((total, space) => total + space.accessibilityScore, 0) / spaces.length)
+    : 0;
 
-  const nearby = restSpaces.slice(0, 4);
+  const nearby = spaces.slice(0, 4);
 
   return (
     <div className="page-wrapper dashboard-page">
@@ -38,7 +41,7 @@ export default function Dashboard() {
 
       {/* Stat cards */}
       <div className="grid-4 dashboard-stats">
-        <StatCard icon="📍" label="Total Rest Spaces" value="305" change="12 this month" color="primary" delay={0} />
+        <StatCard icon="📍" label="Total Rest Spaces" value={`${spaces.length}`} change="Available spaces" color="primary" delay={0} />
         <StatCard icon="♿" label="Avg Accessibility Score" value={`${avgScore}`} change="2.3 pts" color="success" delay={80} />
         <StatCard icon="❤️" label="Saved Places" value={`${state.savedSpaces.length}`} change="Your favorites" color="accent" delay={160} />
         <StatCard icon="💬" label="User Reviews" value={`${totalReviews}`} change="89 this week" color="warning" delay={240} />
