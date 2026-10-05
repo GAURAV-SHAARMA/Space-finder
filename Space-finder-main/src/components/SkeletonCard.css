@@ -1,0 +1,8 @@
+.skeleton-card { overflow: hidden; }
+.skeleton-img { height: 180px; border-radius: 0; }
+.skeleton-body { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.skeleton-title { height: 18px; width: 80%; border-radius: 4px; }
+.skeleton-sub   { height: 13px; width: 55%; border-radius: 4px; }
+.skeleton-chips { display: flex; gap: 6px; }
+.skeleton-chip  { height: 22px; width: 70px; border-radius: 20px; }
+.skeleton-btn   { height: 36px; border-radius: var(--radius-sm); margin-top: 6px; }
