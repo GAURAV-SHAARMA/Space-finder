@@ -1,26 +1,165 @@
 
-# PRSF – Public Rest Space Finder (Frontend)
+# PRSF – Public Rest Space Finder
 
 ## Project Overview
-A modern React app for discovering, reviewing, and analyzing accessible urban rest spaces. The frontend uses a SQL Server-backed API for spaces and reviews, with bundled sample data available if the API is offline.
+PRSF is a full-stack application for discovering, reviewing, and analyzing accessible public rest spaces in urban areas. It combines a modern React frontend, an Express backend, and a Microsoft SQL Server database to provide real-time space information, map views, filtering, and user reviews.
+
+## Architecture Summary
+This project is structured into the following main layers:
+
+- Frontend: React + Vite app for the user interface
+- Backend: Node.js + Express REST API
+- Database: Microsoft SQL Server for storing spaces and reviews
+- Supporting modules: map and UI libraries, environment config, and seed/setup scripts
 
 ## Tech Stack
-- React.js (Vite)
+### Frontend
+- React.js
+- Vite
 - React Router
-- Node.js and Express
-- Microsoft SQL Server (`mssql`)
+- Leaflet + React Leaflet for map features
+- CSS modules and custom styling
 
-## Run the app with SQL Server
+### Backend
+- Node.js
+- Express.js
+- `mssql` driver for SQL Server integration
+- dotenv for environment management
 
-1. Start a local SQL Server instance (for example SQL Server Developer or Express), or connect to an existing server. The VS Code SQL Server extension is a client and does not install or run the server. The app currently uses SQL Server Authentication, so create or use a SQL login with access to the database.
-2. In VS Code, use the SQL Server extension to connect to your server and run `CREATE DATABASE space_finder;`.
-3. Copy `.env.example` to `.env` and enter your server, database, SQL login, and password. For a named instance such as `SQLEXPRESS`, set `SQL_SERVER=localhost\SQLEXPRESS` and remove or comment out `SQL_PORT`.
-4. Install dependencies with `npm install`.
-5. Create the tables and seed the sample spaces and reviews with `npm run db:setup`.
-6. Start the API in one terminal with `npm run dev:api`.
-7. Start the frontend in another terminal with `npm run dev`.
+### Database
+- Microsoft SQL Server
+- Tables for `spaces` and `reviews`
+- Schema and sample data managed through SQL scripts
 
-The Vite development server proxies `/api` requests to `http://localhost:3001`. The API exposes `GET /api/health`, `GET /api/spaces`, `GET /api/spaces/:id`, `GET /api/reviews` (optionally filtered by `spaceId`), and `POST /api/reviews`. New reviews are saved in SQL Server and update the space's rating and review count.
+### Other Tools / Utilities
+- ESLint for code quality
+- Vite dev server for frontend development
+- SQL setup script for database seeding
+
+## Project Structure
+
+```text
+Space-finder-main/
+├─ .env.example                # Example environment variables
+├─ .gitignore                  # Git ignored files
+├─ eslint.config.js            # ESLint configuration
+├─ index.html                  # App entry HTML
+├─ package.json                # Project scripts and dependencies
+├─ package-lock.json           # Lock file for npm
+├─ vite.config.js              # Vite configuration
+├─ README_MAIN.md              # Main project documentation
+├─ README_for_db.md            # Database-specific notes
+├─ README_map.md               # Map-related documentation
+├─ USE master;.sql             # SQL setup helper
+├─ public/                     # Static public assets
+│  ├─ favicon.svg
+│  └─ icons.svg
+├─ src/                        # Frontend source code
+│  ├─ assets/                 # Images and static UI assets
+│  ├─ components/             # Reusable UI components
+│  │  ├─ BarChart.jsx
+│  │  ├─ CircleScore.jsx
+│  │  ├─ EmptyState.jsx
+│  │  ├─ FilterPanel.jsx
+│  │  ├─ Modal.jsx
+│  │  ├─ Navbar.jsx
+│  │  ├─ ProgressBar.jsx
+│  │  ├─ SkeletonCard.jsx
+│  │  ├─ SpaceCard.jsx
+│  │  ├─ StatCard.jsx
+│  │  └─ Toast.jsx
+│  ├─ context/                # Global app context
+│  │  └─ AppContext.jsx
+│  ├─ data/                   # Local seed/mock data
+│  │  ├─ restSpaces.js
+│  │  ├─ reviews.js
+│  │  └─ sampleSpaces.js
+│  ├─ pages/                  # Application pages/screens
+│  │  ├─ AIRecommendations.jsx
+│  │  ├─ Analytics.jsx
+│  │  ├─ Community.jsx
+│  │  ├─ Dashboard.jsx
+│  │  ├─ Explorer.jsx
+│  │  ├─ Landing.jsx
+│  │  ├─ MapView.jsx
+│  │  └─ SpaceDetail.jsx
+│  ├─ styles/                 # Shared styling files
+│  ├─ App.css
+│  ├─ App.jsx                 # Main app component and routes
+│  ├─ index.css
+│  └─ main.jsx                # Frontend bootstrap entry
+├─ server/                     # Backend API and database layer
+│  ├─ db.js                   # SQL Server connection config
+│  ├─ index.js                # Express routes and API logic
+│  ├─ schema.sql              # Database table creation script
+│  └─ setup-database.js       # Database setup and sample seeding
+├─ dist/                      # Production build output
+└─ node_modules/              # Installed dependencies
+```
+
+## Frontend Layer
+The frontend is built in React and handles user interactions such as:
+
+- browsing rest spaces
+- filtering them by accessibility and availability
+- viewing up-to-date map locations
+- reading and submitting reviews
+- viewing analytics and recommendations
+
+Main frontend files:
+- `src/App.jsx` — app routing and layout
+- `src/pages/` — route-based screens
+- `src/components/` — reusable UI elements
+- `src/context/AppContext.jsx` — shared application state
+
+## Backend Layer
+The backend is an Express API that exposes endpoints for the frontend. It connects to the SQL Server database and serves data for:
+
+- getting all spaces
+- retrieving a single space by ID
+- fetching reviews
+- creating new reviews
+
+Key backend file:
+- `server/index.js` — API routes and business logic
+
+## Database Layer
+The database layer uses Microsoft SQL Server to persist the application data. The schema is defined in `server/schema.sql` and seeded via `server/setup-database.js`.
+
+Important database responsibilities:
+- store public rest spaces
+- store space metadata and accessibility details
+- store user reviews and ratings
+- update the rating and review count when a review is added
+
+## Local Setup
+1. Start a local SQL Server instance or connect to an existing server.
+2. Create a database such as `space_finder`.
+3. Copy `.env.example` to `.env` and add your SQL connection details.
+4. Run `npm install`.
+5. Run `npm run db:setup` to create tables and seed sample data.
+6. Start the backend with `npm run dev:api`.
+7. Start the frontend with `npm run dev`.
+
+## API Overview
+The backend provides endpoints such as:
+
+- `GET /api/health`
+- `GET /api/spaces`
+- `GET /api/spaces/:id`
+- `GET /api/reviews`
+- `POST /api/reviews`
+
+These endpoints power the frontend and interact directly with the SQL Server database.
+
+## Summary
+This project follows a clean full-stack structure:
+
+- Frontend for UI and user experience
+- Backend API for business logic and request handling
+- Database for persistent storage of app data
+- Supporting configuration and seed scripts to make setup easier
+
 
 
 
