@@ -14,9 +14,7 @@ Space records are easier to understand when they are connected to real geography
 2. **Coordinates:** Each mapped space needs numeric `lat` and `lng` values. Records without valid coordinates are omitted from the map.
 3. **Map and tiles:** React Leaflet renders an interactive Leaflet map. Its `TileLayer` displays map tiles from OpenStreetMap, with the required contributor attribution visible.
 4. **Markers:** Each space is placed at its stored coordinates. The marker shows the accessibility score and uses a color scale:
-   - Green: 85 or above
-   - Amber: 65–84
-   - Red: below 65
+  
 5. **Selection:** Clicking a marker or an item in the mapped-spaces list selects that space. The map moves to it, and the side panel shows its image, address, scores, features, and a link to the full details.
 6. **Score overlay:** The optional overlay draws a translucent circle with an approximate 350-metre radius around each space, colored using the same score scale.
 7. **Nearby line:** The optional line connects the selected space (or the first mapped space if none is selected) to its closest other space by straight-line distance. The distance shown uses the Haversine formula.
