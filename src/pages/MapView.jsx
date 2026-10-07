@@ -108,7 +108,7 @@ export default function MapView() {
             🌡️ Score overlay
           </button>
           <button className={`map-ctrl-btn ${showRoute ? "active" : ""}`} onClick={() => setShowRoute(!showRoute)}>
-            🛣️ Nearby line
+            🛣️ NEARBY Line
           </button>
           <button className="map-ctrl-btn" onClick={resetMap}>
             🔄 Reset
