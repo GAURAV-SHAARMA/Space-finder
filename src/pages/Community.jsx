@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { useApp } from "../context/AppContext";
 import "./Community.css";
-
+/* category options*/
 const categoryOptions = ["Bench Condition", "Wheelchair Access", "Shade Quality", "Water Availability", "Lighting", "Cleanliness", "Safety", "Other"];
 
 export default function Community() {
